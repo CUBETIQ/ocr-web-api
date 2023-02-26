@@ -10,6 +10,7 @@ Go to [Web API](https://ocr-web-api.heroku.ctdn.dev)
 ### Features
 
 -   [x] Image to Text
+-   [x] Support Languages, English & Khmer (`eng` and `khm`)
 
 ### TODO
 
