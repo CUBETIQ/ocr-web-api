@@ -87,7 +87,14 @@ def create_app():
         if request.method == 'POST':
             file = request.files.get('file')
             if file:
-                return image_to_text(file.stream, lang, dl_to_file=dl)
+                mine_type = file.content_type
+                if mine_type == 'image/png' or mine_type == 'image/jpeg' or mine_type == 'image/jpg':
+                    return image_to_text(file.stream, lang, dl_to_file=dl)
+                else:
+                    return make_response(jsonify({
+                        'error': 'File only png/jpeg/jpg image is supported',
+                        'mine_type': mine_type,
+                    }), 400)
 
         url = request.args.get('url') or request.form.get('url')
         if url:
@@ -98,7 +105,7 @@ def create_app():
                 return image_to_text(BytesIO(data), lang, dl_to_file=dl)
             else:
                 return make_response(jsonify({
-                    'error': 'Only png image is supported',
+                    'error': 'Only png/jpeg/jpg image is supported',
                     'mine_type': mine_type,
                 }), 400)
 
