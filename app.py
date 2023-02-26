@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from flask import Flask, jsonify, make_response, request
+from flask import Flask, jsonify, make_response, request, Response
 from requests import get
 from PIL import Image
 import pytesseract
@@ -11,6 +11,12 @@ available_langs = pytesseract.get_languages(config=tessdata_dir_config)
 
 
 def str2bool(v):
+    if not v:
+        return False
+
+    if isinstance(v, bool):
+        return v
+
     return v.lower() in ("yes", "true", "t", "1")
 
 
@@ -39,11 +45,16 @@ def is_lang_supported(lang):
     return True
 
 
-def image_to_text(data, lang):
+def image_to_text(data, lang, dl_to_file=False):
     image = Image.open(data)
     image = image.convert('L')  # convert image to black and white
     text = pytesseract.image_to_string(
         image, config=tessdata_dir_config, lang=lang)
+
+    if dl_to_file:
+        return Response(text, mimetype='text/plain', headers={
+            'Content-Disposition': 'attachment;filename=ocr.txt'
+        })
 
     return make_response(jsonify({
         'text': text,
@@ -63,6 +74,8 @@ def create_app():
         # Format for lang: eng+khm
         lang = request.args.get('lang') or request.form.get('lang')
         lang = parse_lang(lang)
+        dl = request.args.get('dl') or request.form.get('dl')
+        dl = str2bool(dl)
 
         if lang:
             if not is_lang_supported(lang):
@@ -74,7 +87,7 @@ def create_app():
         if request.method == 'POST':
             file = request.files.get('file')
             if file:
-                return image_to_text(file.stream, lang)
+                return image_to_text(file.stream, lang, dl_to_file=dl)
 
         url = request.args.get('url') or request.form.get('url')
         if url:
@@ -82,7 +95,7 @@ def create_app():
             mine_type = downloadImageFromUrl.headers['Content-Type']
             data = downloadImageFromUrl.content
             if mine_type == 'image/png' or mine_type == 'image/jpeg' or mine_type == 'image/jpg':
-                return image_to_text(BytesIO(data), lang)
+                return image_to_text(BytesIO(data), lang, dl_to_file=dl)
             else:
                 return make_response(jsonify({
                     'error': 'Only png image is supported',
